@@ -1,0 +1,34 @@
+{
+	"entities": [
+		{
+			"name": "type"
+		},
+		{
+			"name": "user"
+		},
+		{
+			"name": "host"
+		},
+		{
+			"name": "proc"
+		}
+	],
+	"interactions": [
+		{
+			"name": "local auth",
+			"n_entities": 3,
+			"entities": [1, 0, 2]
+		},
+		{
+			"name": "remote auth",
+			"n_entities": 4,
+			"entities": [1, 0, 2, 2]
+		},
+		{
+			"name": "process creation",
+			"n_entities": 3,
+			"entities": [2, 1, 3]
+		}
+	],
+	"time_between_updates": 86400
+}
