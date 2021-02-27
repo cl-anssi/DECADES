@@ -50,6 +50,8 @@ exp = [
     str(args.neg_samples), str(args.batch_size),
     str(args.epochs), str(args.weight_decay), args.noise_dist,
     str(args.lambda_0), str(args.lambda_1)]
+if args.fix_seed is not None:
+    exp.append(args.fix_seed)
 for name, val in zip(
     ('nodouble', 'pval'),
     (args.no_double, args.return_pval)):
@@ -57,6 +59,8 @@ for name, val in zip(
         exp.append(name)
 exp_name = '_'.join(exp)
 
+
+# Load dataset
 conf = json.loads(open(args.conf_file).read())
 
 fp_train = os.path.join(args.input_dir, 'train.csv.gz')
@@ -67,6 +71,7 @@ dataset = LANLDataset(
     gzip.open(fp_test, 'rt'),
     conf, args.no_double)
 
+# Build the DECADES model
 entities = conf['entities']
 for i, e in enumerate(entities):
     e['n_entities'] = dataset.arities[i]
@@ -88,6 +93,7 @@ model = DECADES(entities, interactions,
     noise_dist=args.noise_dist, return_pval=args.return_pval
     ).to(device)
 
+# Train the model
 train_start_time = time.time()
 
 running_losses, test_scores, logvars = train_model(
@@ -95,16 +101,16 @@ running_losses, test_scores, logvars = train_model(
     weight_decay=args.weight_decay)
 
 train_duration = time.time() - train_start_time
-itr_weights = [
-    [l.weights.detach().cpu().numpy().tolist() for l in itr.linear]
-    for itr in model.interactions]
 
+# Test the model
 res = test_model(model, dataset, device, args.retrain_batch_size,
     args.lambda_0, args.lambda_1)
 
-res_dict = {'preds': list(res[:,0]), 'labels': list(res[:,1]), 'types': list(res[:,2]),
-    'losses': running_losses, 'test': test_scores, 'time': train_duration, 'logvars': logvars,
-    'weights': itr_weights}
+# Write results
+res_dict = {
+    'preds': list(res[:,0]), 'labels': list(res[:,1]),
+    'types': list(res[:,2]), 'losses': running_losses, 'test': test_scores,
+    'time': train_duration, 'logvars': logvars}
 fp = os.path.join(output_dir, 'res_{0}.json'.format(exp_name))
-with open(fp, 'a+') as out:
+with open(fp, 'w') as out:
     out.write(json.dumps(res_dict))
