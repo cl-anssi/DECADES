@@ -212,7 +212,7 @@ class LANLDataset(Dataset):
                 if i == 0:
                     start = x[-3]
                 if s3 == 'test':
-                    t = x[-3]-start//conf['time_between_updates']
+                    t = (x[-3]-start)//conf['time_between_updates']
                     for j in range(t-len(self._test_idx)+1):
                         self._test_idx.append([])
                 add_to_val = True
