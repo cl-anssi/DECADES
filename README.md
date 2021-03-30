@@ -3,7 +3,7 @@
 # Content
 
 
-This repository contains our Python implementation of the DECADES model presented in our DIMVA '21 submission "Dynamically Modelling Heterogeneous Higher-Order Interactions for Malicious Behavior Detection in Event Logs".
+This repository contains our Python implementation of the DECADES model presented in our paper "Dynamically Modelling Heterogeneous Higher-Order Interactions for Malicious Behavior Detection in Event Logs".
 
 The code can be found in the decades directory:
 
