@@ -51,7 +51,7 @@ exp = [
     str(args.epochs), str(args.weight_decay), args.noise_dist,
     str(args.lambda_0), str(args.lambda_1)]
 if args.fix_seed is not None:
-    exp.append(args.fix_seed)
+    exp.append(str(args.fix_seed))
 for name, val in zip(
     ('nodouble', 'pval'),
     (args.no_double, args.return_pval)):
