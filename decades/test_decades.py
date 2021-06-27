@@ -25,8 +25,9 @@ parser.add_argument('--retrain_batch_size', type=int, default=256, help='Size of
 parser.add_argument('--noise_dist', default='log', help='Noise distribution to use: unigram on all train events (all) or on unique events only (unique), or log-unigram on all train events (log)')
 parser.add_argument('--no_double', dest='no_double', action='store_true', help='If true, only one occurrence of each entity tuple is included in the training set for each interaction type')
 parser.add_argument('--return_pval', dest='return_pval', action='store_true', help='If true, the mean negative logarithm of the mid-p-values is used as anomaly score')
+parser.add_argument('--no_retrain', dest='no_retrain', action='store_true', help='If true, the model is not retrained at the end of each testing period.')
 parser.add_argument('--fix_seed', type=int, default=None, help='Fixed seed for the RNG (for reproducibility)')
-parser.set_defaults(no_double=False, return_pval=False)
+parser.set_defaults(no_double=False, return_pval=False, no_retrain=False)
 args = parser.parse_args()
 
 if args.output_dir is not None:
@@ -53,8 +54,8 @@ exp = [
 if args.fix_seed is not None:
     exp.append(str(args.fix_seed))
 for name, val in zip(
-    ('nodouble', 'pval'),
-    (args.no_double, args.return_pval)):
+    ('nodouble', 'pval', 'noretrain'),
+    (args.no_double, args.return_pval, args.no_retrain)):
     if val:
         exp.append(name)
 exp_name = '_'.join(exp)
@@ -101,16 +102,20 @@ running_losses, test_scores, logvars = train_model(
     weight_decay=args.weight_decay)
 
 train_duration = time.time() - train_start_time
+itr_weights = [
+    [l.weights.detach().cpu().numpy().tolist() for l in itr.linear]
+    for itr in model.interactions]
 
 # Test the model
 res = test_model(model, dataset, device, args.retrain_batch_size,
-    args.lambda_0, args.lambda_1)
+    args.lambda_0, args.lambda_1, args.no_retrain)
 
 # Write results
 res_dict = {
     'preds': list(res[:,0]), 'labels': list(res[:,1]),
     'types': list(res[:,2]), 'losses': running_losses, 'test': test_scores,
-    'time': train_duration, 'logvars': logvars}
+    'time': train_duration, 'logvars': logvars,
+    'weights': itr_weights}
 fp = os.path.join(output_dir, 'res_{0}.json'.format(exp_name))
 with open(fp, 'w') as out:
     out.write(json.dumps(res_dict))

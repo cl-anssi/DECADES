@@ -338,7 +338,7 @@ def retrain(
 
 def test_model(
         model, dataset, device, batch_size,
-        lambda_0, lambda_1):
+        lambda_0, lambda_1, no_retrain=False):
     """
     Tests the model on the given dataset.
     This includes computation of the anomaly scores and retraining.
@@ -357,6 +357,9 @@ def test_model(
         Regularization hyperparameter for new entity embeddings.
     lambda_1 : float
         Regularization hyperparameter for old entity embeddings.
+    no_retrain : bool
+        If true, the model is not retrained at the end of each
+        testing period.
 
     Returns
     -------
@@ -375,7 +378,8 @@ def test_model(
         if i == n_periods-1:
             break
 
-        retrain(
-            model, dataset, device, i, batch_size,
-            lambda_0, lambda_1, sizes)
+        if not no_retrain:
+            retrain(
+                model, dataset, device, i, batch_size,
+                lambda_0, lambda_1, sizes)
     return np.concatenate(res)
