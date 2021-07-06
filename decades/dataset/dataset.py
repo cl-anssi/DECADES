@@ -96,6 +96,9 @@ class LANLDataset(Dataset):
     interaction_lengths : list
         List containing the number of entities involved in each event
         type.
+    interaction_entities : list
+        List of lists, each of which contains the ordered entity types
+        involved in an event type.
     period : float
         Length of one testing period, i.e. time elapsed between two
         retraining phases.
@@ -142,6 +145,10 @@ class LANLDataset(Dataset):
     val_retrain():
         Sets the dataset in retraining validation mode (i.e. returning
         events from the current retraining validation set).
+    load_test_data(file):
+        Replaces the currently loaded test dataset.
+        Useful when the complete test dataset is too large to fit in
+        memory.
     """
 
     def __init__(self, train, test, conf, no_double=False):
@@ -241,6 +248,8 @@ class LANLDataset(Dataset):
 
         self.arities = max_idx
         self.interaction_lengths = [itr['n_entities']
+            for itr in conf['interactions']]
+        self.interaction_entities = [itr['entities']
             for itr in conf['interactions']]
 
         self.period = conf['time_between_updates']
@@ -429,3 +438,41 @@ class LANLDataset(Dataset):
         self.training = False
         self.validating = False
         self.val_retraining = True
+
+    def load_test_data(self, file):
+        """
+        Replaces the currently loaded test dataset.
+        Useful when the complete test dataset is too large to fit in
+        memory.
+
+        Arguments
+        ---------
+        file : file object
+            Iterator on the lines of the new test dataset.
+            Lines should be comma-separated, with all values
+            being numbers.
+            Each line represents one event, structured as
+            follows: entity_1, ..., entity_Ne, [padding],
+            timestamp, event type, label (0 for benign and 1
+            for malicious).
+            Lines should be ordered chronologically.
+        """
+        self._test = []
+        self._test_idx = []
+        self._val_idx = []
+        for i, l in enumerate(file):
+            x = [int(float(y)) for y in l.strip().split(',')]
+            if i == 0:
+                start = x[-3]
+            t = (x[-3]-start)//self.period
+            for j in range(t-len(self._test_idx)+1):
+                self._test_idx.append([])
+            it = x[-2]
+            V = [x[j]
+                for j in range(self.interaction_lengths[it])]
+            D = [self.entity_dict[j]
+                for j in self.interaction_entities[it]]
+            Y = [d[v] for v, d in zip(V, D)]
+            evt = Y + x[len(Y):]
+            self._test.append(evt)
+            self._test_idx[t].append(len(self._test)-1)

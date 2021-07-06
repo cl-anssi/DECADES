@@ -65,7 +65,11 @@ exp_name = '_'.join(exp)
 conf = json.loads(open(args.conf_file).read())
 
 fp_train = os.path.join(args.input_dir, 'train.csv.gz')
-fp_test = os.path.join(args.input_dir, 'test.csv.gz')
+test_files = sorted(
+    [f for f in os.listdir(args.input_dir)
+        if f.startswith('test')]
+    )
+fp_test = os.path.join(args.input_dir, test_files[0])
 
 dataset = LANLDataset(
     gzip.open(fp_train, 'rt'),
@@ -89,7 +93,8 @@ for i in range(len(interactions)):
         noise_dist.append(counts)
     interactions[i]['noise_dist'] = noise_dist
 
-model = DECADES(entities, interactions,
+model = DECADES(
+    entities, interactions,
     embedding_dim=args.embedding_dim, n_noise_samples=args.neg_samples,
     noise_dist=args.noise_dist, return_pval=args.return_pval
     ).to(device)
@@ -107,7 +112,8 @@ itr_weights = [
     for itr in model.interactions]
 
 # Test the model
-res = test_model(model, dataset, device, args.retrain_batch_size,
+res = test_model(
+    model, dataset, device, args.retrain_batch_size,
     args.lambda_0, args.lambda_1, args.no_retrain)
 
 # Write results
@@ -116,6 +122,26 @@ res_dict = {
     'types': list(res[:,2]), 'losses': running_losses, 'test': test_scores,
     'time': train_duration, 'logvars': logvars,
     'weights': itr_weights}
-fp = os.path.join(output_dir, 'res_{0}.json'.format(exp_name))
+fp = os.path.join(output_dir, 'res_{0}_0.json'.format(exp_name))
 with open(fp, 'w') as out:
     out.write(json.dumps(res_dict))
+
+# If there are additional test files, process them
+if len(test_files) > 1:
+    for i, f in enumerate(test_files[1:]):
+        fp_test = os.path.join(args.input_dir, f)
+        dataset.load_test_data(
+            gzip.open(fp_test, 'rt'))
+        res = test_model(
+            model, dataset, device, args.retrain_batch_size,
+            args.lambda_0, args.lambda_1, args.no_retrain)
+        res_dict = {
+            'preds': list(res[:,0]), 'labels': list(res[:,1]),
+            'types': list(res[:,2])
+            }
+        fp = os.path.join(
+            output_dir,
+            'res_{0}_{1}.json'.format(exp_name, i+1)
+            )
+        with open(fp, 'w') as out:
+            out.write(json.dumps(res_dict))

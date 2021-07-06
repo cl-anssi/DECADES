@@ -375,8 +375,8 @@ def test_model(
         sizes = [e.n_entities for e in model.entities]
         res.append(test_one_period(model, dataset, device, i))
 
-        if i == n_periods-1:
-            break
+        #if i == n_periods-1:
+        #    break
 
         if not no_retrain:
             retrain(
