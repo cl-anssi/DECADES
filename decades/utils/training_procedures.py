@@ -88,7 +88,7 @@ def validate_model(model, dataloader, device):
             test_scores[-1] = [0, 0]
     return test_scores
 
-def estimate_moments(model, dataset, device):
+def estimate_moments(model, dataset, device, T=None):
     """
     Estimates the mean and standard deviation of the anomaly scores
     for each event type.
@@ -112,7 +112,10 @@ def estimate_moments(model, dataset, device):
         standard deviation of the anomaly scores for one event type.
     """
     model.validate()
-    dataset.train()
+    if T is not None:
+        dataset.test(T)
+    else:
+        dataset.train()
     dataloader = DataLoader(dataset, batch_size=50000, shuffle=True)
     means = [[] for itr in model.interactions]
     stds = [[] for itr in model.interactions]
@@ -335,6 +338,11 @@ def retrain(
             epoch+1, running_loss, old_score))
         epoch += 1
     dataset.delete_validation_set(T)
+
+    means, stds = estimate_moments(model, dataset, device, T)
+    for i, itr in enumerate(model.interactions):
+        itr.y_mean = means[i]
+        itr.y_std = stds[i]
 
 def test_model(
         model, dataset, device, batch_size,
